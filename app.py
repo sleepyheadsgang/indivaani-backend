@@ -1,3 +1,4 @@
+from utils import translator
 from flask import Flask, request, url_for
 
 app = Flask(__name__)
@@ -19,10 +20,6 @@ def api_translate():
     lang_to = request.form.get("lang_to")
 
     return {
-        "text": translate(text, lang_from, lang_to)
+        "text": translator.translate(text, lang_from, lang_to)
     }
 
-
-def translate(text, lang_from, lang_to):
-    return str(text), str(lang_from), str(lang_to)
-    ...
