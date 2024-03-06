@@ -1,5 +1,5 @@
 import json
-from utils import translator
+from utils import translator, audiohandler
 from utils.htmlhandler import HTMLTranslator
 from flask import Flask, request, url_for, send_file
 
