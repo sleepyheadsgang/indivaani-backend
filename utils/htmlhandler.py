@@ -1,10 +1,10 @@
 import bs4
-from translator import translate
 class HTMLTranslator:
-    def __init__(self, filepath, from_lang, to_lang):
+    def __init__(self, filepath, from_lang, to_lang, translator):
         self.filepath = filepath
         self.from_lang = from_lang
         self.to_lang = to_lang
+        self.translator = translator
         with open(self.filepath, "r", encoding="utf-8") as file:
             self.html_content = file.read()
         soup = bs4.BeautifulSoup(self.html_content, 'html.parser')
@@ -15,7 +15,7 @@ class HTMLTranslator:
             if isinstance(i, bs4.element.NavigableString):
                 if i.strip() != "":
                     if _is_valid_sentence(i):
-                        i.replace_with(translate(i, self.from_lang, self.to_lang))
+                        i.replace_with(self.translator(i, self.from_lang, self.to_lang))
             else:
                 self.iterate_and_translate_nodes(i)
 

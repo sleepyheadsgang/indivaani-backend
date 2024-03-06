@@ -1,3 +1,4 @@
+import json
 from utils import translator
 from utils.htmlhandler import HTMLTranslator
 from flask import Flask, request, url_for, send_file
@@ -51,3 +52,7 @@ def api_translate_file():
     # )
 
     return send_file(translated_file, mimetype="text/html", as_attachment=True, attachment_filename="translated.html")
+
+@app.route("/api/languages", methods=["GET", "POST"])
+def get_languages():
+    return json.load(open("./utils/langs.json"))
