@@ -1,14 +1,16 @@
 import datetime
 import json
 import os
-from utils import translator, audiohandler
-from utils.htmlhandler import HTMLTranslator
-from flask import Flask, flash, redirect, request, url_for, send_file
+import random
+import urllib.request
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
+from utils.htmlhandler import HTMLTranslator
+from utils import translator, audiohandler
+from flask import Flask, flash, redirect, request, url_for, send_file, render_template
 
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder="static/uploads")
 app.secret_key = "super secret key"
 app.config['SQLALCHEMY_DATABASE_URI'] =\
     'sqlite:///' + os.path.join(os.getcwd(), 'database.db')
@@ -25,7 +27,7 @@ class Translations(db.Model):
     userid = db.Column(db.String(80), nullable=False)
     original_text = db.Column(db.String(1000), nullable=False)
     translated_text = db.Column(db.String(1000), nullable=False)
-    from_lang = db.Column(db.String(10), nullable=False)
+    from_lang = db.Column(db.String(10), nullable=True)
     to_lang = db.Column(db.String(10), nullable=False)
     datetime = db.Column(db.DateTime, nullable=False)
 
@@ -55,6 +57,11 @@ def index():
         <input type="text" name="user_id" placeholder="Enter user id">
         <input type="submit" value="Translate">
     </form>
+    <h2>Webpage Translation</h2>
+    <form method="POST" action="/api/translate-webpage">
+        <input type="text" name="url" placeholder="Enter webpage URL">
+        <input type="text" name="lang_to" placeholder="Enter language to translate to">
+        <input type="submit" value="Translate">
     """
 
 
@@ -80,6 +87,40 @@ def api_translate():
     return {
         "text": translated_text
     }
+
+
+@app.route("/api/translate-webpage", methods=["POST"])
+def api_translate_webpage():
+    if request.method != "POST":
+        return {
+            "error": "Invalid request method"
+        }
+    url = request.form.get("url")
+    lang_to = request.form.get("lang_to").lower()
+    data = get_page(url)
+    filename = f"{gen_random_seq()}.html"
+    saved_fp = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    with open(saved_fp, "w", encoding="utf-8") as file:
+        file.write(data.decode("utf-8"))
+    html_translator = HTMLTranslator(
+        saved_fp, "en", lang_to, translator.translate)
+    html_translator.translate_html()
+    return redirect(url_for("get_translated_file", mypath=filename.rstrip(".html")))
+
+def gen_random_seq(length: int=30):
+    return ''.join(random.choices("abcdefghijklmnopqrstuvwxyz1234567890", k=length))
+
+def get_page(url: str):
+    fp = urllib.request.urlopen(url)
+    mybytes = fp.read()
+    return mybytes
+
+
+@app.route("/preview/<mypath>", methods=["GET"])
+def get_translated_file(mypath: str):
+    filename = request.args.get("filename")
+    print("FILENAME", filename)
+    return render_template(mypath+"_translated.html")
 
 
 @app.route("/api/translate-file", methods=["POST"])
@@ -110,7 +151,8 @@ def api_translate_file():
     lang_from = request.form.get("lang_from").lower()
     lang_to = request.form.get("lang_to").lower()
     # Perform translation on the file
-    html_translator = HTMLTranslator(saved_fp, lang_from, lang_to, translator.translate)
+    html_translator = HTMLTranslator(
+        saved_fp, lang_from, lang_to, translator.translate)
     translated_file = html_translator.translate_html()
     return send_file(translated_file, mimetype="text/html", as_attachment=True)
 
