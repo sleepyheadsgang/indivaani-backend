@@ -1,29 +1,84 @@
+import datetime
 import json
+import os
 from utils import translator, audiohandler
 from utils.htmlhandler import HTMLTranslator
-from flask import Flask, request, url_for, send_file
+from flask import Flask, flash, redirect, request, url_for, send_file
+from flask_sqlalchemy import SQLAlchemy
+from werkzeug.utils import secure_filename
+
 
 app = Flask(__name__)
+app.secret_key = "super secret key"
+app.config['SQLALCHEMY_DATABASE_URI'] =\
+    'sqlite:///' + os.path.join(os.getcwd(), 'database.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+app.config['UPLOAD_FOLDER'] = os.path.join(app.static_folder, 'uploads')
+
+db = SQLAlchemy(app)
+app.app_context().push()
+
+
+class Translations(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    userid = db.Column(db.String(80), nullable=False)
+    original_text = db.Column(db.String(1000), nullable=False)
+    translated_text = db.Column(db.String(1000), nullable=False)
+    from_lang = db.Column(db.String(10), nullable=False)
+    to_lang = db.Column(db.String(10), nullable=False)
+    datetime = db.Column(db.DateTime, nullable=False)
+
 
 @app.route("/")
 @app.route("/api")
 def index():
-    return "The URL for this page is {}".format(url_for("index"))
+    return "The URL for this page is {}".format(url_for("index")) + """
+    <h2>Normal Translation</h2>
+    <form method="POST" action="/api/translate">
+        <input type="text" name="text" placeholder="Enter text to translate">
+        <input type="text" name="lang_from" placeholder="Enter language to translate from">
+        <input type="text" name="lang_to" placeholder="Enter language to translate to">
+        <input type="text" name="user_id" placeholder="Enter user id">
+        <input type="submit" value="Translate">
+    </form>
+    <h2>Translation History</h2>
+    <form method="POST" action="/api/translate-history">
+        <input type="text" name="user_id" placeholder="Enter user id">
+        <input type="submit" value="Get translation history">
+    </form>
+    <h2>File Translation</h2>
+    <form method="POST" action="/api/translate-file" enctype="multipart/form-data">
+        <input type="file" name="file" id="file" accept="text/html">
+        <input type="text" name="lang_from" placeholder="Enter language to translate from">
+        <input type="text" name="lang_to" placeholder="Enter language to translate to">
+        <input type="text" name="user_id" placeholder="Enter user id">
+        <input type="submit" value="Translate">
+    </form>
+    """
 
 
-@app.route("/api/translate", methods=["POST"])
+@app.route("/api/translate", methods=["GET", "POST"])
 def api_translate():
     if request.method != "POST":
         return {
             "error": "Invalid request method"
         }
     text = request.form.get("text")
-    lang_from = request.form.get("lang_from")
-    lang_to = request.form.get("lang_to")
+    lang_from = request.form.get("lang_from").lower()
+    lang_to = request.form.get("lang_to").lower()
+    user_id = request.form.get("user_id")
+
+    translated_text = translator.translate(text, lang_from, lang_to)
+    translation = Translations(userid=user_id, original_text=text, translated_text=translated_text,
+                               from_lang=lang_from, to_lang=lang_to, datetime=datetime.datetime.now())
+    db.session.add(translation)
+    db.session.commit()
 
     return {
-        "text": translator.translate(text, lang_from, lang_to)
+        "text": translated_text
     }
+
 
 @app.route("/api/translate-file", methods=["POST"])
 def api_translate_file():
@@ -31,28 +86,69 @@ def api_translate_file():
         return {
             "error": "Invalid request method"
         }
-    
-    file = request.files.get("file")
-    lang_from = request.form.get("lang_from")
-    lang_to = request.form.get("lang_to")
+    print("Request received")
 
+    # check if the post request has the file part
+    print(request.files, "Any files?")
+    if 'file' not in request.files:
+        flash('No file part')
+        return redirect(request.url)
+    file = request.files['file']
+    print("File is there", file.filename)
+    # If the user does not select a file, the browser submits an
+    # empty file without a filename.
+    if file.filename == '':
+        flash('No selected file')
+        return redirect(request.url)
     if not file:
-        return {
-            "error": "No file uploaded"
-        }
+        flash('No selected file')
+        return redirect(request.url)
 
+    filename = secure_filename(file.filename)
+    saved_fp = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    print("Saved file path", saved_fp)
+    file.save(saved_fp)
+
+    lang_from = request.form.get("lang_from").lower()
+    lang_to = request.form.get("lang_to").lower()
     # Perform translation on the file
-    translator = HTMLTranslator(file, lang_from, lang_to)
-    translated_file = translator.translate_html()
+    html_translator = HTMLTranslator(saved_fp, lang_from, lang_to, translator.translate)
+    translated_file = html_translator.translate_html()
 
     # return app.response_class(
     #     response=translated_text,
     #     status=200,
     #     mimetype='text/html'
     # )
+    print("Translated!!!!")
+    return send_file(translated_file, mimetype="text/html", as_attachment=True)
 
-    return send_file(translated_file, mimetype="text/html", as_attachment=True, attachment_filename="translated.html")
 
-@app.route("/api/languages", methods=["GET", "POST"])
+@app.route("/api/translate-history", methods=["POST"])
+def api_translate_history():
+    if request.method != "POST":
+        return {
+            "error": "Invalid request method"
+        }
+    user_id = request.form.get("user_id")
+    translations = Translations.query.filter_by(userid=user_id).all()
+    return {
+        "translations": [
+            {
+                "original_text": translation.original_text,
+                "translated_text": translation.translated_text,
+                "from_lang": translation.from_lang,
+                "to_lang": translation.to_lang,
+                "datetime": translation.datetime
+            }
+            for translation in translations
+        ]
+    }
+
+
+@app.route("/api/languages", methods=["GET"])
 def get_languages():
     return json.load(open("./utils/langs.json"))
+
+
+db.create_all()

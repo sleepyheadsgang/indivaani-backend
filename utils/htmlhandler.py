@@ -22,7 +22,8 @@ class HTMLTranslator:
     def translate_html(self):
         self.iterate_and_translate_nodes(self.body_content)
         new_soup = bs4.BeautifulSoup(str(self.body_content), 'html.parser')
-        with open(f"{self.filename.rstrip(".html")}_translated.html", "w") as outfile:
+        print(new_soup)
+        with open(f"{self.filename.rstrip('.html')}_translated.html", "w", encoding="utf-8") as outfile:
             outfile.write(str(new_soup))
 
 

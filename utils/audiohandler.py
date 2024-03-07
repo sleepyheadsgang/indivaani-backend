@@ -9,5 +9,6 @@ def transcribe_audio(filepath):
             return text
         except Exception as e:
             return -1
-        
-print(transcribe_audio("./harvard.wav"))
+
+if __name__ == "__main__":     
+    print(transcribe_audio("./harvard.wav"))
