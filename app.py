@@ -86,10 +86,7 @@ def api_translate_file():
         return {
             "error": "Invalid request method"
         }
-    print("Request received")
-
     # check if the post request has the file part
-    print(request.files, "Any files?")
     if 'file' not in request.files:
         flash('No file part')
         return redirect(request.url)
@@ -106,7 +103,6 @@ def api_translate_file():
 
     filename = secure_filename(file.filename)
     saved_fp = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    print("Saved file path", saved_fp)
     file.save(saved_fp)
 
     lang_from = request.form.get("lang_from").lower()
@@ -114,13 +110,6 @@ def api_translate_file():
     # Perform translation on the file
     html_translator = HTMLTranslator(saved_fp, lang_from, lang_to, translator.translate)
     translated_file = html_translator.translate_html()
-
-    # return app.response_class(
-    #     response=translated_text,
-    #     status=200,
-    #     mimetype='text/html'
-    # )
-    print("Translated!!!!")
     return send_file(translated_file, mimetype="text/html", as_attachment=True)
 
 
