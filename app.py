@@ -65,7 +65,9 @@ def api_translate():
             "error": "Invalid request method"
         }
     text = request.form.get("text")
-    lang_from = request.form.get("lang_from").lower()
+    lang_from = request.form.get("lang_from")
+    if lang_from is not None:
+        lang_from = lang_from.lower()
     lang_to = request.form.get("lang_to").lower()
     user_id = request.form.get("user_id")
 
