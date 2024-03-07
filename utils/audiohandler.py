@@ -11,4 +11,4 @@ def transcribe_audio(filepath):
             return -1
 
 if __name__ == "__main__":     
-    print(transcribe_audio("./harvard.wav"))
+    print(transcribe_audio("../hindi.wav"))

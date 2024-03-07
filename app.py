@@ -62,6 +62,13 @@ def index():
         <input type="text" name="url" placeholder="Enter webpage URL">
         <input type="text" name="lang_to" placeholder="Enter language to translate to">
         <input type="submit" value="Translate">
+    </form>
+    <h2>Audio Translation</h2>
+    <form method="POST" action="/api/translate-audio" enctype="multipart/form-data">
+        <input type="file" name="file" id="file" accept="audio/*">
+        <input type="text" name="lang_to" placeholder="Enter language to translate to">
+        <input type="submit" value="Translate">
+    </form>
     """
 
 
@@ -115,13 +122,35 @@ def get_page(url: str):
     mybytes = fp.read()
     return mybytes
 
-
 @app.route("/preview/<mypath>", methods=["GET"])
 def get_translated_file(mypath: str):
     filename = request.args.get("filename")
     print("FILENAME", filename)
     return render_template(mypath+"_translated.html")
 
+@app.route("/api/translate-audio", methods=["POST"])
+def api_translate_audio():
+    if request.method != "POST":
+        return {
+            "error": "Invalid request method"
+        }
+    file = request.files['file']
+    lang_to = request.form.get("lang_to").lower()
+    # If the user does not select a file, the browser submits  an
+    # empty file without a filename.
+    if file.filename == '' or not file:
+        flash('No selected file')
+        return redirect(request.url)
+
+    filename = secure_filename(file.filename)
+    saved_fp = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(saved_fp)
+    transcribed_text = audiohandler.transcribe_audio(saved_fp)
+    translated_text = translator.translate(transcribed_text, "auto", lang_to)
+    os.remove(saved_fp)
+    return {
+        "text": translated_text
+    }
 
 @app.route("/api/translate-file", methods=["POST"])
 def api_translate_file():
