@@ -1,5 +1,15 @@
 # indivaani-backend
 
+### API Endpoints
+-   `/` and `/api` - Home
+-   `/api/translate` - Translate Text
+-   `/api/translate-webpage` - Translate Webpage
+-   `/api/translate-audio` - Translate Audio
+-   `/api/translate-file` - Translate Files such as docx, pdf, etc...
+-   `/api/translation-history` - Translation History
+-   `/api/languages` - Supported Languages
+
+
 ### Requirements
 All the requirements are listed in the [`requirements.txt`](./requirements.txt) file.
 -   `Python >= 3.10.12`
@@ -19,15 +29,6 @@ All the requirements are listed in the [`requirements.txt`](./requirements.txt) 
     flask run
     ```
     The server will be running on [`http://localhost:5000/`](http://localhost:5000/)
-
-### API Endpoints
--   `/` and `/api` - Home
--   `/api/translate` - Translate Text
--   `/api/translate-webpage` - Translate Webpage
--   `/api/translate-audio` - Translate Audio
--   `/api/translate-file` - Translate Files such as docx, pdf, etc...
--   `/api/translation-history` - Translation History
--   `/api/languages` - Supported Languages
 
 ### File Structure
 ```
