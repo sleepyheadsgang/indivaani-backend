@@ -1,22 +1,21 @@
-import datetime
-import json
 import os
+import json
 import random
+import datetime
 import urllib.request
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
-from utils.htmlhandler import HTMLTranslator
 from utils import translator, audiohandler
+from utils.htmlhandler import HTMLTranslator
 from flask import Flask, flash, redirect, request, url_for, send_file, render_template
 
 
 app = Flask(__name__, template_folder="static/uploads")
 app.secret_key = "super secret key"
-app.config['SQLALCHEMY_DATABASE_URI'] =\
-    'sqlite:///' + os.path.join(os.getcwd(), 'database.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(os.getcwd(), 'database.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
 app.config['UPLOAD_FOLDER'] = os.path.join(app.static_folder, 'uploads')
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 db = SQLAlchemy(app)
 app.app_context().push()
@@ -212,5 +211,6 @@ def api_translate_history():
 def get_languages():
     return json.load(open("./utils/langs.json"))
 
-
-db.create_all()
+if __name__ == "__main__":
+    db.create_all()
+    app.run(debug=True)
